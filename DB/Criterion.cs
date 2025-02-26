@@ -1,0 +1,17 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace DiplomBackend.DB;
+
+public partial class Criterion
+{
+    public int CriteriaId { get; set; }
+
+    public string Name { get; set; } = null!;
+
+    public string Description { get; set; } = null!;
+
+    public int MaxScore { get; set; }
+
+    public virtual ICollection<Document> Documents { get; set; } = new List<Document>();
+}
