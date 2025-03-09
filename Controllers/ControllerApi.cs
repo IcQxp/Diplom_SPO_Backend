@@ -9,6 +9,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.JsonWebTokens;
+using DiplomBackend.Models;
 
 namespace DiplomBackend.Controllers
 {
@@ -251,6 +252,33 @@ namespace DiplomBackend.Controllers
             if (!Directory.Exists(_storagePath))
             {
                 Directory.CreateDirectory(_storagePath);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllDocuments()
+        {
+            try
+            {
+                var documents = await _context.Documents.ToListAsync();
+                var documentsDto = documents.Select(doc => new DocumentsListDto
+                {
+                    DocumentId = doc.DocumentId,
+                    FilePath = doc.FilePath,
+                    DownloadDate = doc.DownloadDate,
+                    StudentId = doc.StudentId,
+                    Score = doc.Score,
+                    Criteria = doc.Criteria,
+                    DocumentType = doc.DocumentType,
+                    Employee = doc.Employee,
+                    Status = doc.Status
+
+                });
+                return Ok(documentsDto);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "An error occurred while processing your request.");
             }
         }
 
