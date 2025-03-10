@@ -47,6 +47,7 @@ namespace DiplomBackend.Controllers
                 Subject = new ClaimsIdentity(new Claim[]
                 {
                 new Claim(ClaimTypes.Name, user.Login),
+                new Claim(ClaimTypes.Role, user.RoleId.ToString())
                     // Добавьте другие утверждения, если необходимо
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryInMinutes),
@@ -62,18 +63,13 @@ namespace DiplomBackend.Controllers
             return Ok(new { Token = tokenString });
         }
 
-
-        [Authorize]
+        [Authorize(Policy = "RequireRoleId1")]
         [HttpGet("test")]
         public async Task<IActionResult> Test()
         {
             return Ok(new { Status = 1 });
         }
-        [HttpGet("test1")]
-        public async Task<IActionResult> Test1()
-        {
-            return Ok(new { Status = 1 });
-        }
+        
 
         [Authorize]
         [HttpGet("me")]

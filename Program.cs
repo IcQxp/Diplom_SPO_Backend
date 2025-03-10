@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +49,14 @@ builder.Services.AddCors(options =>
                       });
 });
 
+builder.Services.AddAuthorization(options =>
+{
+
+    options.AddPolicy("RequireRoleId2", policy => policy.RequireClaim(ClaimTypes.Role, "2"));
+    options.AddPolicy("RequireRoleId1", policy => policy.RequireClaim(ClaimTypes.Role, "1"));
+});
+
+
 var connetctionString = builder.Configuration.GetConnectionString("Default");
 builder.Services.AddDbContext<DiplomContext>(opt => opt.UseSqlServer(connetctionString));
 
@@ -63,13 +73,12 @@ if (!app.Environment.IsDevelopment())
 
 
 
-
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseCors("CorsPolicy");
 app.UseAuthentication();
-app.UseAuthorization();
+app.UseAuthorization(    );
 
 app.MapControllerRoute(
     name: "default",
