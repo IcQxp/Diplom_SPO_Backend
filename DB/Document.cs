@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace DiplomBackend.DB;
 
@@ -7,8 +8,10 @@ public partial class Document
 {
     public int DocumentId { get; set; }
 
+
     public int StudentId { get; set; }
 
+    [JsonIgnore]
     public int StatusId { get; set; }
 
     public int? EmployeeId { get; set; }

@@ -1,5 +1,6 @@
 ﻿using DiplomBackend.DB;
 using DiplomBackend.Models;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -43,6 +44,66 @@ namespace DiplomBackend.Controllers.Documents
 
                 });
                 return Ok(documentsDto);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "An error occurred while processing your request.");
+            }
+        }
+
+        [HttpGet]
+        [Route("{id}")]
+        public async Task<IActionResult> GetAllUserDocuments(int id)
+        {
+            try
+            {
+                //// Получаем список статусов
+                //var statuses = await _context.Statuses.ToListAsync();
+
+                //// Получаем документы для указанного studentId
+                //var documents = await _context.Documents
+                //    .Where(doc => doc.StudentId == id)
+                //    .ToListAsync();
+
+                //// Создаем словарь для быстрого поиска статусов по StatusId
+                //var statusDict = statuses.ToDictionary(s => s.StatusId, s => s);
+
+                //// Проходим по каждому документу и присваиваем соответствующий статус
+                //foreach (var doc in documents)
+                //{
+                //    if (statusDict.TryGetValue(doc.StatusId, out var status))
+                //    {
+                //        doc.Status = status;
+                //    }
+                //    else
+                //    {
+                //        // Обработка случая, когда статус не найден
+                //        doc.Status = null; // Или вы можете выбрать другое поведение
+                //    }
+                //}
+
+                //// Возвращаем документы с заполненными статусами
+                //return Ok(documents);
+                var statuses = await _context.Statuses.ToListAsync();
+
+                var documents = await _context.Documents
+                    .Where(doc => doc.StudentId == id)
+                    .ToListAsync();
+
+                // Обновляем свойство Status у документов, используя Join
+                var updatedDocuments = documents
+                    .Join(
+                        statuses,
+                        doc => doc.StatusId, // Поле для соединения в Documents
+                        status => status.StatusId, // Поле для соединения в Statuses
+                        (doc, status) =>
+                        {
+                            doc.Status = status; // Обновляем свойство Status
+                            return doc;
+                        })
+                    .ToList();
+
+                return Ok(updatedDocuments);
             }
             catch (Exception ex)
             {
