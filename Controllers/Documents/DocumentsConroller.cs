@@ -57,51 +57,66 @@ namespace DiplomBackend.Controllers.Documents
         {
             try
             {
-                //// Получаем список статусов
-                //var statuses = await _context.Statuses.ToListAsync();
-
-                //// Получаем документы для указанного studentId
-                //var documents = await _context.Documents
-                //    .Where(doc => doc.StudentId == id)
-                //    .ToListAsync();
-
-                //// Создаем словарь для быстрого поиска статусов по StatusId
-                //var statusDict = statuses.ToDictionary(s => s.StatusId, s => s);
-
-                //// Проходим по каждому документу и присваиваем соответствующий статус
-                //foreach (var doc in documents)
-                //{
-                //    if (statusDict.TryGetValue(doc.StatusId, out var status))
-                //    {
-                //        doc.Status = status;
-                //    }
-                //    else
-                //    {
-                //        // Обработка случая, когда статус не найден
-                //        doc.Status = null; // Или вы можете выбрать другое поведение
-                //    }
-                //}
-
-                //// Возвращаем документы с заполненными статусами
-                //return Ok(documents);
                 var statuses = await _context.Statuses.ToListAsync();
+                var docsTypes = await _context.DocumentTypes.ToListAsync();
+                var criteries = await _context.Criteria.ToListAsync();
+                var employees = await _context.Employees.ToListAsync();
 
                 var documents = await _context.Documents
                     .Where(doc => doc.StudentId == id)
+                    .Where(doc => doc.StatusId != 2) // Status DELETED
                     .ToListAsync();
 
-                // Обновляем свойство Status у документов, используя Join
                 var updatedDocuments = documents
-                    .Join(
-                        statuses,
-                        doc => doc.StatusId, // Поле для соединения в Documents
-                        status => status.StatusId, // Поле для соединения в Statuses
-                        (doc, status) =>
-                        {
-                            doc.Status = status; // Обновляем свойство Status
-                            return doc;
-                        })
-                    .ToList();
+            .GroupJoin(
+                statuses,
+                doc => doc.StatusId,
+                status => status.StatusId,
+                (doc, statusGroup) => new { doc, statusGroup })
+            .SelectMany(
+                x => x.statusGroup.DefaultIfEmpty(), // Левое соединение
+                (x, status) =>
+                {
+                    x.doc.Status = status; // Обновляем свойство Status
+                    return x.doc;
+                })
+            .GroupJoin(
+                docsTypes,
+                doc => doc.DocumentTypeId,
+                docType => docType.DocumentTypeId,
+                (doc, docTypeGroup) => new { doc, docTypeGroup })
+            .SelectMany(
+                x => x.docTypeGroup.DefaultIfEmpty(), // Левое соединение
+                (x, docType) =>
+                {
+                    x.doc.DocumentType = docType; // Обновляем свойство DocumentType
+                    return x.doc;
+                })
+            .GroupJoin(
+                criteries,
+                doc => doc.CriteriaId,
+                criteria => criteria.CriteriaId,
+                (doc, criteriaGroup) => new { doc, criteriaGroup })
+            .SelectMany(
+                x => x.criteriaGroup.DefaultIfEmpty(), // Левое соединение
+                (x, criteria) =>
+                {
+                    x.doc.Criteria = criteria; // Обновляем свойство Criteria
+                    return x.doc;
+                })
+            .GroupJoin(
+                employees,
+                doc => doc.CriteriaId,
+                emp => emp.EmployeeId,
+                (doc, criteriaGroup) => new { doc, criteriaGroup })
+            .SelectMany(
+                x => x.criteriaGroup.DefaultIfEmpty(), // Левое соединение
+                (x, emp) =>
+                {
+                    x.doc.Employee = emp; // Обновляем свойство Criteria
+                    return x.doc;
+                })
+            .ToList();
 
                 return Ok(updatedDocuments);
             }
@@ -172,7 +187,7 @@ namespace DiplomBackend.Controllers.Documents
 
 
         [HttpGet("download/{id}")]
-        public async Task<IActionResult> DownloadDocument(int id)
+                public async Task<IActionResult> DownloadDocument(int id)
         {
             // Поиск документа в базе данных
             var document = await _context.Documents.FindAsync(id);
@@ -198,6 +213,94 @@ namespace DiplomBackend.Controllers.Documents
             // Возвращение файла с указанием MIME-типа и имени файла
             return File(memory, "application/pdf", Path.GetFileName(document.FilePath));
         }
+
+
+        // Метод для обновления файла
+        [HttpPut("update/{id}")]
+        public async Task<IActionResult> UpdateDocument(int id, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest("File is empty.");
+            }
+
+            if (Path.GetExtension(file.FileName).ToLower() != ".pdf")
+            {
+                return BadRequest("Only PDF files are allowed.");
+            }
+
+            var document = await _context.Documents.FindAsync(id);
+            if (document == null)
+            {
+                return NotFound("Document not found.");
+            }
+
+            // Удаляем старый файл
+            if (System.IO.File.Exists(document.FilePath))
+            {
+                System.IO.File.Delete(document.FilePath);
+            }
+
+            // Сохраняем новый файл
+            var studentFolder = Path.Combine("UploadedFiles", document.StudentId.ToString());
+            Directory.CreateDirectory(studentFolder);
+
+            string fileName = Path.GetFileNameWithoutExtension(file.FileName);
+            string extension = Path.GetExtension(file.FileName);
+            string baseFilePath = Path.Combine(studentFolder, fileName + extension);
+            string filePath = baseFilePath;
+
+            int count = 1;
+            while (System.IO.File.Exists(filePath))
+            {
+                filePath = Path.Combine(studentFolder, $"{fileName} ({count}){extension}");
+                count++;
+            }
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            // Обновляем путь к файлу в базе данных
+            document.FilePath = filePath;
+            document.DownloadDate = DateTime.UtcNow;
+            // Обновляем другие поля по необходимости
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok(new { document.FilePath, FileName = Path.GetFileName(filePath) });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        [HttpDelete("delete/{id}")]
+        public async Task<IActionResult> DeleteDocument(int id)
+        {
+            var document = await _context.Documents.FindAsync(id);
+            if (document == null)
+            {
+                return NotFound("Document not found.");
+            }
+
+            // Устанавливаем статус на 2 (предполагается, что это статус "Удалён" или "Архивирован")
+            document.StatusId = 2;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "Document marked as deleted." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
     }
 
 }

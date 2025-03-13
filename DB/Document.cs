@@ -14,14 +14,17 @@ public partial class Document
     [JsonIgnore]
     public int StatusId { get; set; }
 
+    [JsonIgnore]
     public int? EmployeeId { get; set; }
 
     public string FilePath { get; set; } = null!;
 
     public DateTime DownloadDate { get; set; }
 
+    [JsonIgnore]
     public int? DocumentTypeId { get; set; }
 
+    [JsonIgnore]
     public int? CriteriaId { get; set; }
 
     public int? Score { get; set; }

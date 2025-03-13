@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace DiplomBackend.DB;
 
@@ -27,6 +28,7 @@ public partial class Employee
 
     public int RoleId { get; set; }
 
+    [JsonIgnore]
     public virtual ICollection<Document> Documents { get; set; } = new List<Document>();
 
     public virtual Gender GenderCodeNavigation { get; set; } = null!;
