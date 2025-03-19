@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace DiplomBackend.DB;
 
@@ -9,7 +10,9 @@ public partial class Group
 
     public string GroupNumber { get; set; } = null!;
 
+    [JsonIgnore]
     public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
-
+    
+    [JsonIgnore]
     public virtual ICollection<Student> Students { get; set; } = new List<Student>();
 }
