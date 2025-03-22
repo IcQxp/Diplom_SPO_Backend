@@ -292,48 +292,86 @@ namespace DiplomBackend.Controllers.Rating
         }
 
         [HttpGet("top-students")]
-        public IActionResult GetTopStudents()
+        public IActionResult GetTopStudents(int count, int? criteriaId = null)
         {
-
-
-
             // 1. Получаем все критерии
             var criteria = _context.Criteria.ToList();
 
             // 2. Получаем всех студентов
             var students = _context.Students.ToList();
 
-            // 3. Создаем список названий критериев (ключи)
+            // 3. Формируем данные для каждого студента
+            var studentScores = students.Select(student => new
+            {
+                FullName = $"{student.Lastname} {student.Firstname}", // Полное имя студента
+                studentid = student.StudentId,
+                Scores = criteria.ToDictionary(
+                    criterion => criterion.Name,
+                    criterion =>
+                    {
+                        // Баллы студента по этому критерию
+                        var score = _context.Documents
+                            .Where(d => d.StudentId == student.StudentId && d.CriteriaId == criterion.CriteriaId && d.Score.HasValue)
+                            .Sum(d => d.Score.GetValueOrDefault(0));
+                        return score;
+                    }),
+                TotalScore = criteria.Sum(criterion =>
+                {
+                    // Сумма баллов по всем критериям
+                    var score = _context.Documents
+                        .Where(d => d.StudentId == student.StudentId && d.CriteriaId == criterion.CriteriaId && d.Score.HasValue)
+                        .Sum(d => d.Score.GetValueOrDefault(0));
+                    return score;
+                })
+            }).ToList();
+
+            // 4. Фильтруем и сортируем студентов
+            IEnumerable<dynamic> topStudents;
+            if (criteriaId.HasValue)
+            {
+                // Если указан criteriaId, фильтруем по этому критерию
+                var criterion = criteria.FirstOrDefault(c => c.CriteriaId == criteriaId.Value);
+                if (criterion == null)
+                {
+                    return NotFound($"Критерий с ID {criteriaId} не найден.");
+                }
+
+                topStudents = studentScores
+                    .OrderByDescending(s => s.Scores[criterion.Name]) // Сортировка по баллам конкретного критерия
+                    .Take(count); // Топ count студентов
+            }
+            else
+            {
+                // Если criteriaId не указан, сортируем по сумме баллов
+                topStudents = studentScores
+                    .OrderByDescending(s => s.TotalScore) // Сортировка по общей сумме баллов
+                    .Take(count); // Топ count студентов
+            }
+
+            // 5. Форматируем данные для ответа
             var keys = criteria.Select(c => c.Name).ToList();
 
-            // 4. Формируем данные для каждого студента
-            var data = students.Select(student => new Dictionary<string, object>
+            var data = topStudents.Select(student => new Dictionary<string, object>
             {
-                ["country"] = $"{student.Lastname} {student.Firstname}" // Полное имя студента
-            }.Concat(criteria.SelectMany(criterion =>
+                ["country"] = student.FullName, // Полное имя студента
+                ["studentid"] = student.studentid,
+            }.Concat(keys.SelectMany(key =>
             {
-                // Баллы студента по этому критерию
-                var score = _context.Documents
-                    .Where(d => d.StudentId == student.StudentId && d.CriteriaId == criterion.CriteriaId && d.Score.HasValue)
-                    .Sum(d => d.Score.GetValueOrDefault(0));
-
-                // Добавляем два поля: баллы и цвет
+                // Добавляем баллы и цвета для каждого критерия
+                var score = student.Scores[key];
                 return new Dictionary<string, object>
         {
-            { criterion.Name, score }, // Значение баллов
-            { $"{criterion.Name}Color", GenerateRandomHslColor() } // Цвет
+            { key, score }, // Значение баллов
+            //{ $"{key}Color", GenerateRandomHslColor() } // Цвет
         };
             })).ToDictionary(pair => pair.Key, pair => pair.Value)).ToList();
 
-            // 5. Формируем итоговый ответ
+            // 6. Формируем итоговый ответ
             var response = new ChartResponse
             {
                 Keys = keys,
                 Data = data
             };
-
-
-            
 
             return Ok(response);
         }
@@ -347,5 +385,107 @@ namespace DiplomBackend.Controllers.Rating
             var lightness = 50; // Яркость (фиксированная)
             return $"hsl({hue}, {saturation}%, {lightness}%)";
         }
+
+        public class TopStudentsRequest
+        {
+            public int Count { get; set; }
+            public int[] CriteriaIDs { get; set; }
+        }
+
+        [HttpPost("top-students-array")]
+        public IActionResult GetTopStudents([FromBody] TopStudentsRequest request)
+        {
+            int count = request.Count;
+            int[] criteriaIDs = request.CriteriaIDs;
+
+
+            // 1. Получаем все критерии
+            var allCriteria = _context.Criteria.ToList();
+
+            // 2. Фильтруем критерии, если указан массив criteriaIDs
+            var filteredCriteria = criteriaIDs != null && criteriaIDs.Length > 0
+                ? allCriteria.Where(c => criteriaIDs.Contains(c.CriteriaId)).ToList()
+                : allCriteria;
+
+            Console.Clear();
+
+            foreach (var elem in criteriaIDs)
+                Console.WriteLine(criteriaIDs);
+
+            foreach (var elem in filteredCriteria)
+            Console.WriteLine(elem.Name);
+
+            // 3. Получаем всех студентов
+            
+            var students = _context.Students.ToList();
+
+            // 4. Формируем данные для каждого студента
+            var studentScores = students.Select(student => new
+            {
+                FullName = $"{student.Lastname} {student.Firstname}", // Полное имя студента
+                StudentId = student.StudentId, // ID студента
+                Scores = filteredCriteria.ToDictionary(
+                    criterion => criterion.Name,
+                    criterion =>
+                    {
+                        // Баллы студента по этому критерию
+                        var score = _context.Documents
+                            .Where(d => d.StudentId == student.StudentId && d.CriteriaId == criterion.CriteriaId && d.Score.HasValue)
+                            .Sum(d => d.Score.GetValueOrDefault(0));
+                        return score;
+                    }),
+                TotalScore = filteredCriteria.Sum(criterion =>
+                {
+                    // Сумма баллов по выбранным критериям
+                    var score = _context.Documents
+                        .Where(d => d.StudentId == student.StudentId && d.CriteriaId == criterion.CriteriaId && d.Score.HasValue)
+                        .Sum(d => d.Score.GetValueOrDefault(0));
+                    return score;
+                })
+            }).ToList();
+
+            // 5. Сортируем студентов по общей сумме баллов по выбранным критериям
+            var topStudents = studentScores
+                .OrderByDescending(s => s.TotalScore) // Сортировка по общей сумме баллов
+                .Take(count) // Топ count студентов
+                .ToList();
+
+            // 6. Форматируем данные для ответа
+            var keys = filteredCriteria.Select(c => c.Name).ToList();
+
+            var data = topStudents.Select(student => new Dictionary<string, object>
+            {
+                ["country"] = student.FullName, // Полное имя студента
+                ["studentId"] = student.StudentId, // ID студента
+            }.Concat(keys.SelectMany(key =>
+            {
+                // Добавляем баллы для каждого критерия
+                var score = student.Scores[key];
+                return new Dictionary<string, object>
+        {
+            { key, score } // Значение баллов
+        };
+            })).ToDictionary(pair => pair.Key, pair => pair.Value)).ToList();
+
+            // 7. Формируем итоговый ответ
+            var response = new ChartResponse
+            {
+                Keys = keys,
+                Data = data
+            };
+
+            return Ok(response);
+        }
+
+
+        [HttpGet("grade/{id}")]
+        public IActionResult GetUserGrades(int id)
+        {
+
+            var grades = _context.Grades.Where(g => g.StudentId == id);
+
+            return Ok(grades);
+        }
+
     }
 }
