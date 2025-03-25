@@ -17,7 +17,6 @@ namespace DiplomBackend.Controllers.Documents
         {
             _context = context;
             _storagePath = Path.Combine(Directory.GetCurrentDirectory(), "UploadedFiles");
-
             if (!Directory.Exists(_storagePath))
             {
                 Directory.CreateDirectory(_storagePath);
@@ -185,37 +184,26 @@ namespace DiplomBackend.Controllers.Documents
             }
         }
 
-
         [HttpGet("download/{id}")]
-                public async Task<IActionResult> DownloadDocument(int id)
+        public async Task<IActionResult> DownloadDocument(int id)
         {
-            // Поиск документа в базе данных
             var document = await _context.Documents.FindAsync(id);
             if (document == null)
-            {
                 return NotFound("Document not found.");
-            }
 
-            // Проверка наличия пути к файлу
             if (string.IsNullOrEmpty(document.FilePath) || !System.IO.File.Exists(document.FilePath))
-            {
                 return NotFound("File not found.");
-            }
 
-            // Чтение файла из файловой системы
             var memory = new MemoryStream();
             using (var stream = new FileStream(document.FilePath, FileMode.Open, FileAccess.Read))
             {
                 await stream.CopyToAsync(memory);
             }
-            memory.Position = 0; // Установка позиции в начало потока
+            memory.Position = 0;
 
-            // Возвращение файла с указанием MIME-типа и имени файла
             return File(memory, "application/pdf", Path.GetFileName(document.FilePath));
         }
 
-
-        // Метод для обновления файла
         [HttpPut("update/{id}")]
         public async Task<IActionResult> UpdateDocument(int id, IFormFile file)
         {

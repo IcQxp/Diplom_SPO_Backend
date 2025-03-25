@@ -48,13 +48,8 @@ namespace DiplomBackend.Controllers.Auth
             if (employee == null && student == null)
                 return Unauthorized();
 
-
             var role = model.isEmployee ? await _context.Roles.FirstOrDefaultAsync(r => r.RoleId == employee.RoleId) : new Role { RoleId = 0, Name = "Студент" };
             string rolename = role?.Name;
-
-
-
-
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(_jwtSettings.SecretKey);
@@ -73,9 +68,6 @@ namespace DiplomBackend.Controllers.Auth
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
             var tokenString = tokenHandler.WriteToken(token);
-
-            //Console.WriteLine($"Generated token for user {user.Login}: {tokenString}");
-            //Console.WriteLine(user);
 
             return Ok(new
             {
@@ -123,111 +115,6 @@ namespace DiplomBackend.Controllers.Auth
 
 
 
-        //[Authorize]
-        //[HttpGet("me")]
-        //public IActionResult GetCurrentUser()
-        //{
-        //    var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-        //    if (string.IsNullOrEmpty(token))
-        //    {
-        //        Console.WriteLine("Authorization header is missing or empty");
-        //        return Unauthorized();
-        //    }
-        //    Console.WriteLine("token:\t" + token);
-        //    var tokenHandler = new JwtSecurityTokenHandler();
-        //    var key = Encoding.ASCII.GetBytes(_jwtSettings.SecretKey);
-        //    Console.WriteLine("key:\t" + key);
-
-        //    try
-        //    {
-        //        Console.WriteLine("try");
-        //        var validationParameters = new TokenValidationParameters
-        //        {
-        //            ValidateIssuerSigningKey = true,
-        //            IssuerSigningKey = new SymmetricSecurityKey(key),
-        //            ValidateIssuer = true,
-        //            ValidIssuer = _jwtSettings.Issuer, // Убедитесь, что это значение соответствует Issuer в токене
-        //            ValidateAudience = true,
-        //            ValidAudience = _jwtSettings.Audience, // Убедитесь, что это значение соответствует Audience в токене
-        //            ClockSkew = TimeSpan.Zero
-        //        };
-
-        //        Console.WriteLine("validAud:\t" + validationParameters.ValidAudience);
-        //        var claimsPrincipal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
-        //        Console.WriteLine("Token validation successful");
-
-        //        var username = claimsPrincipal.Claims.First(x => x.Type == ClaimTypes.Name).Value;
-        //        var user = _context.Employees.FirstOrDefault(u => u.Login == username);
-        //        if (user == null)
-        //        {
-        //            return NotFound();
-        //        }
-
-        //        return Ok(new
-        //        {
-        //            EmployeeId = user.EmployeeId,
-        //            Login = user.Login,
-        //            Firstname = user.Firstname
-        //            // Добавьте другие поля, которые хотите вернуть
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"Token validation failed: {ex.Message}");
-        //        return Unauthorized();
-        //    }
-        //}
-        //[Authorize]
-        //[HttpGet("me")]
-        //public IActionResult GetCurrentUser()
-        //{
-
-        //    var username = User.FindFirst(ClaimTypes.Name)?.Value;
-        //    if (string.IsNullOrEmpty(username))
-        //        return Unauthorized("Invalid token or user not found.");
-
-        //    var role = User.FindFirst(ClaimTypes.Role)?.Value;
-        //    if (role == null)
-        //        return Unauthorized("Invalid token or role not found.");
-
-        //    string rolename = role=="0"?"Студент": _context.Roles.FirstOrDefault(r => r.RoleId.ToString() == role).Name;
-
-        //    var student = new Student();
-        //    var employee = new Employee();
-        //    employee = null;
-        //    student = null;
-
-
-
-        //    if (role == "0")
-        //        student = _context.Students.FirstOrDefault(u => u.Login == username);
-        //    else
-        //        employee = _context.Employees.FirstOrDefault(u => u.Login == username);
-
-        //    if (employee == null && student == null)
-        //        return NotFound();
-
-        //    return Ok(new
-        //    {
-        //        user = new EmployeeDto
-        //        {
-        //            lastname = role!="0"? employee.Lastname : student.Lastname,
-        //            firstname = role != "0" ? employee.Firstname : student.Firstname,
-        //            patronymic = role != "0" ? employee.Patronymic : student.Patronymic,
-        //            login = role != "0" ? employee.Login : student.Login,
-        //            gender = role != "0" ? employee.GenderCode : student.GenderCode,
-        //            id = role != "0" ? employee.EmployeeId : student.StudentId,
-        //            email = role != "0" ? employee.Email : "-",
-        //            telephone = role != "0" ? employee.Telephone : "-",
-        //            rolename = rolename,    
-        //            roleId = role != "0" ? employee.RoleId : 0,
-        //            birthDate = role != "0" ? employee.BirthDate : student.BirthDate
-
-        //        }
-        //    });
-        //}
-        
-
         [Authorize]
         [HttpGet("me")]
         public IActionResult GetCurrentUser()
@@ -256,7 +143,7 @@ namespace DiplomBackend.Controllers.Auth
                     lastname = student.Lastname,
                     firstname = student.Firstname,
                     patronymic = student.Patronymic,
-                    login = student.Login,  
+                    login = student.Login,
                     gender = student.GenderCode,
                     id = student.StudentId,
                     email = "-",
