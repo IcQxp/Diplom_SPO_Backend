@@ -253,6 +253,11 @@ namespace DiplomBackend.Controllers.Documents
             // Обновляем путь к файлу в базе данных
             document.FilePath = filePath;
             document.DownloadDate = DateTime.UtcNow;
+            document.StatusId = 1;
+            document.CriteriaId = null;
+            document.EmployeeId = null;
+            document.DocumentTypeId = null;
+            document.Score = 0;
             // Обновляем другие поля по необходимости
 
             try
@@ -264,6 +269,60 @@ namespace DiplomBackend.Controllers.Documents
             {
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
+        }
+
+        [HttpPut("update-status/{id}")]
+        public async Task<IActionResult> UpdateDocumentStatus(int id, [FromBody] DocumentStatusUpdateModel model)
+        {
+            // Проверяем входные данные
+            if (model == null)
+            {
+                return BadRequest("Request body is required.");
+            }
+
+            var document = await _context.Documents.FindAsync(id);
+            if (document == null)
+            {
+                return NotFound("Document not found.");
+            }
+
+            // Обновляем только статусы
+            document.StatusId = model.StatusId;
+            document.CriteriaId = model.CriteriaId;
+            document.EmployeeId = model.EmployeeId;
+            document.DocumentTypeId = model.DocumentTypeId;
+            document.Score = model.Score;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok(new
+                {
+                    message = "Document status updated successfully.",
+                    documentId = document.DocumentId,
+                    updatedStatus = new
+                    {
+                        StatusId = document.StatusId,
+                        CriteriaId = document.CriteriaId,
+                        EmployeeId = document.EmployeeId,
+                        DocumentTypeId = document.DocumentTypeId,
+                        Score = document.Score
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        public class DocumentStatusUpdateModel
+        {
+            public int StatusId { get; set; }
+            public int? CriteriaId { get; set; }
+            public int? EmployeeId { get; set; }
+            public int? DocumentTypeId { get; set; }
+            public int? Score { get; set; }
         }
 
         [HttpDelete("delete/{id}")]
