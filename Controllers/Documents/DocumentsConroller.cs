@@ -128,7 +128,13 @@ namespace DiplomBackend.Controllers.Documents
         [HttpPost("upload")]
         public async Task<IActionResult> UploadDocument(IFormFile file)
         {
-            int studentId = 1;
+
+            string studentIdString = Request.Form["studentId"];
+            if (!int.TryParse(studentIdString, out int studentId))
+            {
+                return BadRequest("Invalid or missing studentId.");
+            }
+
             if (file == null || file.Length == 0)
             {
                 return BadRequest("File is empty.");
