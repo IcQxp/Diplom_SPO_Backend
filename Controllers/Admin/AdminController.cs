@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DiplomBackend.Controllers.Admin
 {
-    [Route("api/admin/")]
+    [Route("api/admin/[controller]")]
     [ApiController]
     public abstract class AdminControllerBase : ControllerBase
     {

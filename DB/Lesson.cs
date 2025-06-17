@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace DiplomBackend.DB;
 
@@ -21,6 +22,7 @@ public partial class Lesson
 
     public virtual Employee Employee { get; set; } = null!;
 
+    [JsonIgnore]
     public virtual ICollection<Grade> Grades { get; set; } = new List<Grade>();
 
     public virtual Group Group { get; set; } = null!;

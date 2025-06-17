@@ -33,6 +33,7 @@ public partial class Employee
 
     public virtual Gender GenderCodeNavigation { get; set; } = null!;
 
+    [JsonIgnore]
     public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
 
     public virtual Role Role { get; set; } = null!;

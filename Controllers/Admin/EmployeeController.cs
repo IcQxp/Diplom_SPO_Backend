@@ -196,5 +196,12 @@ namespace DiplomBackend.Controllers.Admin
             return !string.IsNullOrWhiteSpace(telephone) && telephone.All(char.IsDigit) && telephone.Length >= 10;
         }
 
+        [HttpGet("get-all-employees")]
+        public async Task<IActionResult> GetAllEmployees()
+        {
+            var employee = await _context.Employees.ToListAsync();
+
+            return Ok(employee);
+        }
     }
 }

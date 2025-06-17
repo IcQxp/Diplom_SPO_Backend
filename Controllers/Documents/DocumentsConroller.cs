@@ -3,6 +3,7 @@ using DiplomBackend.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace DiplomBackend.Controllers.Documents
 {
@@ -22,27 +23,206 @@ namespace DiplomBackend.Controllers.Documents
                 Directory.CreateDirectory(_storagePath);
             }
         }
+        //Новый
+        //[HttpGet("stream/{id}")]
+        //public async Task<IActionResult> StreamDocument(int id)
+        //{
+        //    var document = await _context.Documents.FindAsync(id);
+        //    if (document == null || !System.IO.File.Exists(document.FilePath))
+        //        return NotFound("Файл не найден.");
+
+        //    var memory = new MemoryStream();
+        //    using (var stream = new FileStream(document.FilePath, FileMode.Open))
+        //    {
+        //        await stream.CopyToAsync(memory);
+        //    }
+        //    memory.Position = 0;
+
+        //    return File(memory, "application/pdf", Path.GetFileName(document.FilePath));
+        //}
+        //[HttpGet("stream/{id}")]
+        //public async Task<IActionResult> StreamDocument(int id)
+        //{
+        //    var document = await _context.Documents.FindAsync(id);
+
+        //    if (document == null)
+        //    {
+        //        Console.WriteLine($"Документ с ID {id} не найден.");
+        //        return NotFound("Документ не найден.");
+        //    }
+
+        //    Console.WriteLine($"Попытка загрузить файл: {document.FilePath}");
+
+        //    if (!System.IO.File.Exists(document.FilePath))
+        //    {
+        //        Console.WriteLine($"Файл по указанному пути не существует: {document.FilePath}");
+        //        return NotFound("Файл не найден.");
+        //    }
+
+        //    try
+        //    {
+        //        var memory = new MemoryStream();
+        //        using (var stream = new FileStream(document.FilePath, FileMode.Open, FileAccess.Read))
+        //        {
+        //            await stream.CopyToAsync(memory);
+        //        }
+        //        memory.Position = 0;
+
+        //        Console.WriteLine($"Файл успешно загружен: {document.FilePath}");
+
+        //        return File(memory, "application/pdf", Path.GetFileName(document.FilePath));
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.Error.WriteLine($"Ошибка при чтении файла: {ex.Message}");
+        //        return StatusCode(500, "Ошибка при чтении файла.");
+        //    }
+        //}
+        //[HttpGet("stream/{id}")]
+        //public async Task<IActionResult> StreamDocument(int id)
+        //{
+        //    var document = await _context.Documents.FindAsync(id);
+        //    if (document == null)
+        //    {
+        //        return NotFound("Документ не найден.");
+        //    }
+
+        //    if (!System.IO.File.Exists(document.FilePath))
+        //    {
+        //        return NotFound("Файл не найден.");
+        //    }
+
+        //    try
+        //    {
+        //        // Возвращаем файл как поток с правильными заголовками
+        //        var fileStream = new FileStream(document.FilePath, FileMode.Open, FileAccess.Read);
+        //        return File(fileStream, "application/pdf", enableRangeProcessing: true);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, "Ошибка при чтении файла.");
+        //    }
+        //}
+        //[HttpGet("stream/{id}")]
+        //public async Task<IActionResult> StreamDocument(int id)
+        //{
+        //    var document = await _context.Documents.FindAsync(id);
+        //    if (document == null)
+        //    {
+        //        return NotFound(new
+        //        {
+        //            Message = "Документ не найден в базе данных",
+        //            DocumentId = id,
+        //            Found = false
+        //        });
+        //    }
+
+        //    bool fileExists = System.IO.File.Exists(document.FilePath);
+
+        //    // Отладочная информация
+        //    var debugInfo = new
+        //    {
+        //        DocumentId = id,
+        //        FilePath = document.FilePath,
+        //        FileExists = fileExists,
+        //        FileSize = fileExists ? new FileInfo(document.FilePath).Length : 0,
+        //        FileLastModified = fileExists ? File.GetLastWriteTime(document.FilePath) : (DateTime?)null,
+        //        IsPdf = false,
+        //        Message = fileExists ? "Файл найден" : "Файл не существует по указанному пути"
+        //    };
+
+        //    if (!fileExists)
+        //    {
+        //        return NotFound(debugInfo);
+        //    }
+
+        //    // Проверяем, является ли файл PDF
+        //    try
+        //    {
+        //        byte[] header = new byte[4];
+        //        using (var fs = new FileStream(document.FilePath, FileMode.Open, FileAccess.Read))
+        //        {
+        //            await fs.ReadAsync(header, 0, 4);
+        //        }
+
+        //        debugInfo["IsPdf"] = header[0] == 0x25 && // %
+        //                         header[1] == 0x50 && // P
+        //                         header[2] == 0x44 && // D
+        //                         header[3] == 0x46;   // F
+
+        //        if (!debugInfo.IsPdf)
+        //        {
+        //            return BadRequest(new
+        //            {
+        //                debugInfo,
+        //                Message = "Файл не является PDF (не начинается с %PDF)"
+        //            });
+        //        }
+
+        //        // Если все проверки пройдены, возвращаем файл И отладочную информацию
+        //        var fileStream = new FileStream(document.FilePath, FileMode.Open, FileAccess.Read);
+        //        Response.Headers.Append("X-Debug-Info", JsonSerializer.Serialize(debugInfo));
+
+        //        return File(fileStream, "application/pdf", enableRangeProcessing: true);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new
+        //        {
+        //            debugInfo,
+        //            Error = ex.Message,
+        //            StackTrace = ex.StackTrace
+        //        });
+        //    }
+        //}
+
+
+        [HttpGet("pdf/{id}")]
+        public async Task<IActionResult> GetDocumentPdf(int id)
+        {
+            var document = await _context.Documents.FindAsync(id);
+            if (document == null) return NotFound();
+
+            if (!System.IO.File.Exists(document.FilePath))
+                return NotFound();
+
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(document.FilePath);
+            var base64String = Convert.ToBase64String(fileBytes);
+
+            return Ok(new
+            {
+                fileData = base64String,
+                mimeType = "application/pdf",
+                document = document // если нужно передать метаданные
+            });
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> GetAllDocuments()
         {
             try
             {
-                var documents = await _context.Documents.ToListAsync();
-                var documentsDto = documents.Select(doc => new DocumentsListDto
-                {
-                    DocumentId = doc.DocumentId,
-                    FilePath = doc.FilePath,
-                    DownloadDate = doc.DownloadDate,
-                    StudentId = doc.StudentId,
-                    Score = doc.Score,
-                    Criteria = doc.Criteria,
-                    DocumentType = doc.DocumentType,
-                    Employee = doc.Employee,
-                    Status = doc.Status
+                var documents = await _context.Documents
+                    .Include(i => i.Criteria)
+                    .Include(i => i.DocumentType)
+                    .Include(i => i.Status)
+                    .ToListAsync();
+                //var documentsDto = documents.Select(doc => new DocumentsListDto
+                //{
+                //    DocumentId = doc.DocumentId,
+                //    FilePath = doc.FilePath,
+                //    DownloadDate = doc.DownloadDate,
+                //    StudentId = doc.StudentId,
+                //    Score = doc.Score,
+                //    Criteria = doc.Criteria,
+                //    DocumentType = doc.DocumentType,
+                //    Employee = doc.Employee,
+                //    Status = doc.Status
 
-                });
-                return Ok(documentsDto);
+                //});
+                return Ok(documents);
+                //return Ok(documentsDto);
             }
             catch (Exception ex)
             {
@@ -210,6 +390,49 @@ namespace DiplomBackend.Controllers.Documents
             return File(memory, "application/pdf", Path.GetFileName(document.FilePath));
         }
 
+        [HttpGet("download2/{id}")]
+        public async Task<IActionResult> DownloadDocument2(int id)
+        {
+            var document = await _context.Documents.FindAsync(id);
+            if (document == null)
+            {
+                Console.WriteLine($"Document with ID {id} not found.");
+                return NotFound("Document not found.");
+            }
+
+            if (string.IsNullOrEmpty(document.FilePath) || !System.IO.File.Exists(document.FilePath))
+            {
+                Console.WriteLine($"File for document {id} not found or path is invalid.");
+                return NotFound("File not found.");
+            }
+
+            try
+            {
+                var memory = new MemoryStream();
+                using (var stream = new FileStream(document.FilePath, FileMode.Open, FileAccess.Read))
+                {
+                    await stream.CopyToAsync(memory);
+                }
+                memory.Position = 0;
+
+                var fileBytes = memory.ToArray();
+                var fileBase64 = Convert.ToBase64String(fileBytes);
+
+                Console.WriteLine($"Successfully returned PDF for document {id}.");
+                return Ok(new
+                {
+                    fileName = Path.GetFileName(document.FilePath),
+                    fileType = "application/pdf",
+                    fileData = fileBase64
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error while downloading document: {ex.Message}");
+                return StatusCode(500, "Internal server error.");
+            }
+        }
+
         [HttpPut("update/{id}")]
         public async Task<IActionResult> UpdateDocument(int id, IFormFile file)
         {
@@ -291,13 +514,35 @@ namespace DiplomBackend.Controllers.Documents
             {
                 return NotFound("Document not found.");
             }
+            // Status_ID Name
+            //1   Новый
+            //2   Удален
+            //3   Проверен
+            //4   Требует изменения
+            //5   На проверке
+
+            switch (model.StatusId) {
+                case 4:
+                case 5:
+                    {
+                        document.StatusId = model.StatusId;
+                        document.EmployeeId = model.EmployeeId;
+                        break;
+                    }
+                 default:
+                    {
+                        document.StatusId = model.StatusId;
+                        document.CriteriaId = model.CriteriaId;
+                        document.EmployeeId = model.EmployeeId;
+                        document.DocumentTypeId = model.DocumentTypeId;
+                        document.Score = model.Score;
+                        break;
+                    }
+            }
+
 
             // Обновляем только статусы
-            document.StatusId = model.StatusId;
-            document.CriteriaId = model.CriteriaId;
-            document.EmployeeId = model.EmployeeId;
-            document.DocumentTypeId = model.DocumentTypeId;
-            document.Score = model.Score;
+            
 
             try
             {
@@ -354,6 +599,35 @@ namespace DiplomBackend.Controllers.Documents
             }
         }
 
+
+        [HttpGet("statuses")]
+        public async Task<IActionResult> GetAllStatuses()
+        {
+            return Ok(await _context.Statuses.ToListAsync());
+        }
+
+        [HttpGet("doc/{id}")]
+        
+        public async Task<IActionResult> GetAllStatuses(int id)
+        {
+            try
+            {
+                var doc = await _context.Documents
+                    .Include(i=>i.Status)
+                    .Include(i => i.Criteria)
+                    .Include(i => i.DocumentType)
+                    .Include(i => i.Employee)
+                    .FirstAsync(elem=>elem.DocumentId==id);
+                if (doc==null)
+                    return NotFound("Такого документа не существует");
+
+                return Ok(doc);
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, e);
+            }
+        }
     }
 
 }

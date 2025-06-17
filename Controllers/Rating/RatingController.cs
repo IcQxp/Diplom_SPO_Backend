@@ -192,6 +192,102 @@ namespace DiplomBackend.Controllers.Rating
         //    }
         //}
 
+        // выдает null если id status ов null
+        //[Route("GetUsersRatings")]
+        //[HttpPost]
+        //public async Task<IActionResult> GetUsersRatings([FromBody] int[] userIds)
+        //{
+        //    try
+        //    {
+        //        // 1. Проверяем входные данные
+        //        if (userIds == null || userIds.Length == 0 || userIds.Length > 10)
+        //        {
+        //            return BadRequest("You can request ratings for up to 10 users.");
+        //        }
+
+        //        // 2. Получаем всех студентов по переданным ID
+        //        var users = await _context.Students
+        //            .Where(u => userIds.Contains(u.StudentId))
+        //            .ToListAsync();
+
+        //        if (users.Count == 0)
+        //        {
+        //            return NotFound("No users found with the provided IDs.");
+        //        }
+
+        //        // 3. Получаем все группы для найденных студентов
+        //        var groupIds = users.Select(u => u.GroupId).Distinct();
+        //        var groups = await _context.Groups
+        //            .Where(g => groupIds.Contains(g.GroupId))
+        //            .ToDictionaryAsync(g => g.GroupId, g => g.GroupNumber);
+
+        //        // 4. Получаем все документы для указанных студентов
+        //        var documents = await _context.Documents
+        //            .Where(d => userIds.Contains(d.StudentId) && d.Score.HasValue)
+        //            .Include(d => d.Criteria) // Подгружаем связанные данные Criteria
+        //            .ToListAsync();
+
+        //        // 5. Получаем все критерии из базы данных
+        //        var allCriteria = await _context.Criteria.ToListAsync();
+
+        //        // 6. Группируем документы по студентам и критериям
+        //        var groupedScores = documents
+        //            .GroupBy(d => new { d.StudentId, d.Criteria.Name }) // Группируем по ID студента и названию критерия
+        //            .ToDictionary(
+        //                group => (group.Key.StudentId, group.Key.Name), // Ключ: (ID студента, название критерия)
+        //                group => group.Sum(d => d.Score.Value) // Значение: сумма баллов
+        //            );
+
+        //        // 7. Формируем список пользователей (ключи)
+        //        var userKeys = users.Select(user =>
+        //        {
+        //            var groupNumber = groups.ContainsKey(user.GroupId) ? groups[user.GroupId] : "No Group";
+        //            return $"{user.Lastname} {user.Firstname} {groupNumber}";
+        //        }).ToList();
+
+        //        // 8. Формируем результат (рейтинги)
+        //        var ratings = allCriteria.Select(criterion =>
+        //        {
+        //            var ratingData = new Dictionary<string, object>
+        //            {
+        //                ["criteria"] = criterion.Name // Название критерия
+        //            };
+
+        //            // Добавляем баллы для каждого пользователя
+        //            foreach (var user in users)
+        //            {
+        //                var key = (user.StudentId, criterion.Name);
+        //                var score = groupedScores.ContainsKey(key)
+        //                    ? groupedScores[key] // Если есть баллы, берем их
+        //                    : 0; // Если нет, ставим 0
+
+        //                // Формируем ключ для словаря: ФИО + группа
+        //                var groupNumber = groups.ContainsKey(user.GroupId) ? groups[user.GroupId] : "No Group";
+        //                var userKey = $"{user.Lastname} {user.Firstname} {groupNumber}";
+        //                ratingData[userKey] = score;
+        //            }
+
+        //            return ratingData;
+        //        }).ToList();
+
+        //        // 9. Формируем итоговый ответ
+        //        var result = new ChartResponse
+        //        {
+        //            Keys = userKeys,
+        //            Data = ratings
+        //        };
+
+        //        // 10. Возвращаем результат
+        //        return Ok(result);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Логирование ошибки (можно добавить логирование в реальном приложении)
+        //        Console.Error.WriteLine($"Error: {ex.Message}");
+        //        return StatusCode(500, "An error occurred while processing your request.");
+        //    }
+        //}
+
         [Route("GetUsersRatings")]
         [HttpPost]
         public async Task<IActionResult> GetUsersRatings([FromBody] int[] userIds)
@@ -209,7 +305,7 @@ namespace DiplomBackend.Controllers.Rating
                     .Where(u => userIds.Contains(u.StudentId))
                     .ToListAsync();
 
-                if (users.Count == 0)
+                if (users == null || users.Count == 0)
                 {
                     return NotFound("No users found with the provided IDs.");
                 }
@@ -218,7 +314,7 @@ namespace DiplomBackend.Controllers.Rating
                 var groupIds = users.Select(u => u.GroupId).Distinct();
                 var groups = await _context.Groups
                     .Where(g => groupIds.Contains(g.GroupId))
-                    .ToDictionaryAsync(g => g.GroupId, g => g.GroupNumber);
+                    .ToDictionaryAsync(g => g.GroupId, g => g.GroupNumber ?? "No Group");
 
                 // 4. Получаем все документы для указанных студентов
                 var documents = await _context.Documents
@@ -228,9 +324,14 @@ namespace DiplomBackend.Controllers.Rating
 
                 // 5. Получаем все критерии из базы данных
                 var allCriteria = await _context.Criteria.ToListAsync();
+                if (allCriteria == null || allCriteria.Count == 0)
+                {
+                    return NotFound("No criteria found in database.");
+                }
 
                 // 6. Группируем документы по студентам и критериям
                 var groupedScores = documents
+                    .Where(d => d.Criteria != null) // Добавляем проверку на null
                     .GroupBy(d => new { d.StudentId, d.Criteria.Name }) // Группируем по ID студента и названию критерия
                     .ToDictionary(
                         group => (group.Key.StudentId, group.Key.Name), // Ключ: (ID студента, название критерия)
@@ -240,7 +341,7 @@ namespace DiplomBackend.Controllers.Rating
                 // 7. Формируем список пользователей (ключи)
                 var userKeys = users.Select(user =>
                 {
-                    var groupNumber = groups.ContainsKey(user.GroupId) ? groups[user.GroupId] : "No Group";
+                    var groupNumber = groups.TryGetValue(user.GroupId, out var number) ? number : "No Group";
                     return $"{user.Lastname} {user.Firstname} {groupNumber}";
                 }).ToList();
 
@@ -256,12 +357,10 @@ namespace DiplomBackend.Controllers.Rating
                     foreach (var user in users)
                     {
                         var key = (user.StudentId, criterion.Name);
-                        var score = groupedScores.ContainsKey(key)
-                            ? groupedScores[key] // Если есть баллы, берем их
-                            : 0; // Если нет, ставим 0
+                        var score = groupedScores.TryGetValue(key, out var value) ? value : 0;
 
                         // Формируем ключ для словаря: ФИО + группа
-                        var groupNumber = groups.ContainsKey(user.GroupId) ? groups[user.GroupId] : "No Group";
+                        var groupNumber = groups.TryGetValue(user.GroupId, out var num) ? num : "No Group";
                         var userKey = $"{user.Lastname} {user.Firstname} {groupNumber}";
                         ratingData[userKey] = score;
                     }
@@ -281,8 +380,7 @@ namespace DiplomBackend.Controllers.Rating
             }
             catch (Exception ex)
             {
-                // Логирование ошибки (можно добавить логирование в реальном приложении)
-                Console.Error.WriteLine($"Error: {ex.Message}");
+                // Логирование ошибки
                 return StatusCode(500, "An error occurred while processing your request.");
             }
         }
@@ -302,6 +400,8 @@ namespace DiplomBackend.Controllers.Rating
         [HttpPost("top-students-array")]
         public IActionResult GetTopStudents([FromBody] TopStudentsRequest request)
         {
+
+
             int count = request.Count;
             int[] criteriaIDs = request.CriteriaIDs;
 
@@ -379,6 +479,33 @@ namespace DiplomBackend.Controllers.Rating
             var grades = _context.Grades.Where(g => g.StudentId == id);
 
             return Ok(grades);
+        }
+
+        [HttpGet("grades/{id}/avg")]
+        public IActionResult GetAvgUserGrades(int id)
+        {
+            try
+            {
+                // Получаем среднее значение оценок студента с округлением до 2 знаков
+                var averageGrade = _context.Grades
+                    .Where(g => g.StudentId == id)
+                    .Select(g => (decimal?)g.Value) // Явно приводим к decimal?
+                    .Average();
+
+                if (!averageGrade.HasValue)
+                {
+                    return Ok(new { value = 0m }); // или null, если оценок нет
+                }
+
+                // Округляем до 2 знаков после запятой
+                decimal roundedAverage = Math.Round(averageGrade.Value, 2);
+
+                return Ok(new { value = roundedAverage });
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, new { error = "Internal server error" });
+            }
         }
 
     }

@@ -160,6 +160,14 @@ namespace DiplomBackend.Controllers.Admin
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, "Ошибка при обновлении студента: " + ex.Message);
             }
+
         }
+            [HttpGet]
+            public async Task<IActionResult> getStudents()
+            {
+                var students = await _context.Students.Include(g=>g.Group).ToListAsync();
+            
+            return Ok(students);
+            }
     }
 }

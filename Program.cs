@@ -46,6 +46,10 @@ builder.Services.AddCors(options =>
                                 .AllowAnyMethod()
                                 .AllowAnyHeader()
                                 .AllowCredentials();
+                          policy.WithOrigins("https://lyashovilyadiplom.vercel.app") // Замените на ваш домен/домены 
+                                .AllowAnyMethod()
+                                .AllowAnyHeader()
+                                .AllowCredentials();
                       });
 });
 
