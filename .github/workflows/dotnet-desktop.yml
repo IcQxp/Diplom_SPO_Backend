@@ -58,6 +58,7 @@ jobs:
     env:
       Solution_Name: DiplomBackend.sln
       Configuration: Debug
+      Wap_Project_Directory: DiplomBackend
 
     steps:
     - name: Checkout
